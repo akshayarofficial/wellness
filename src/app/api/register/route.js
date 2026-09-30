@@ -22,28 +22,8 @@ export async function POST(request) {
     return NextResponse.json(
       {
         success: false,
-        error: 'Unable to connect to the registration service. Please verify the Express backend server is running.',
-        details: error.message,
+        error: 'Unable to connect to the registration service. Please try again in a moment.',
       },
-      { status: 503 }
-    );
-  }
-}
-
-export async function GET(request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const groupId = searchParams.get('groupId');
-    const url = groupId 
-      ? `${EXPRESS_API_URL}/registrations?groupId=${groupId}` 
-      : `${EXPRESS_API_URL}/registrations`;
-
-    const res = await fetch(url);
-    const data = await res.json();
-    return NextResponse.json(data, { status: res.status });
-  } catch (error) {
-    return NextResponse.json(
-      { success: false, error: 'Registration backend offline', details: error.message },
       { status: 503 }
     );
   }

@@ -131,14 +131,9 @@ function RegistrationFormInner() {
   useEffect(() => {
     async function loadGroups() {
       try {
-        let res;
-        try {
-          res = await fetch('http://localhost:5000/api/groups');
-        } catch {
-          res = await fetch('/api/groups');
-        }
+        const res = await fetch('/api/groups');
 
-        if (res && res.ok) {
+        if (res.ok) {
           const data = await res.json();
           if (data && data.groups && data.groups.length > 0) {
             // merge with color tokens
@@ -202,21 +197,11 @@ function RegistrationFormInner() {
     };
 
     try {
-      let response;
-      try {
-        response = await fetch('http://localhost:5000/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      } catch (errDirect) {
-        console.log('Direct Express call failed, falling back to Next.js API proxy...', errDirect.message);
-        response = await fetch('/api/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-      }
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
 
       const result = await response.json();
 

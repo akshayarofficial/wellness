@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "server": "node server/index.js",
+    "server:dev": "node --watch server/index.js",
+    "admin:create": "node server/scripts/create-admin.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
@@ -20,5 +22,8 @@
   "devDependencies": {
     "eslint": "^9",
     "eslint-config-next": "16.3.6"
+  },
+  "engines": {
+    "node": ">=22.13"
   }
 }
