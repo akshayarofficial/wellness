@@ -34,6 +34,9 @@ yarn-error.log*
 
 # Server Local Data (auto-generated at runtime)
 server/data/*.json
+server/data/*.json.imported-*
+server/data/*.db
+server/data/*.db-*
 !server/data/.gitkeep
 
 # Operating System & Editor Files
