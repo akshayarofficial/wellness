@@ -1,0 +1,16 @@
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    formats: ['image/avif', 'image/webp'],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/express/:path*',
+        destination: 'http://127.0.0.1:5000/api/:path*',
+      },
+    ];
+  },
+};
+
+export default nextConfig;
