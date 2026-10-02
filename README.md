@@ -1,69 +1,85 @@
 # Everyday Mental Wellness
 
-Public website plus registration backend and admin panel for the Everyday Mental Wellness program.
+Public website, registration flow and admin panel for the Everyday Mental Wellness program.
 
-- **Frontend**: Next.js (`src/app`) on port 3000
-- **Backend**: Express + SQLite (`server/`) on port 5000, reached by the browser only through Next.js
-- **Admin panel**: `/admin`, where admins sign in with a username and password
+- **App**: Next.js (`src/app`)
+- **Database & auth**: Supabase (Postgres + Supabase Auth)
+- **Admin panel**: `/admin`, where admins sign in with email and password
 
-Requires **Node.js 22.13+** (uses the built-in `node:sqlite` module).
+Requires **Node.js 22.13+**.
 
-## Getting started
+## Setup
+
+### 1. Environment
 
 ```bash
 npm install
+cp .env.example .env.local
+```
 
-# 1. Create the first admin account (prompts for a password, min 10 chars)
-npm run admin:create -- admin
+Fill in `.env.local` from **Supabase Dashboard → Project Settings → API**:
 
-# 2. Start the API (use server:dev for auto-restart on changes)
-npm run server
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | anon / publishable key |
+| `SUPABASE_SERVICE_ROLE_KEY` | service_role / secret key (server-only, never commit) |
 
-# 3. In another terminal, start the website
+### 2. Database
+
+Apply [`supabase/migrations/20260930120000_registrations_and_admins.sql`](supabase/migrations/20260930120000_registrations_and_admins.sql) in one of two ways:
+
+- **SQL Editor**: paste the file into Supabase Dashboard → SQL Editor and run it, or
+- **Supabase CLI**: `supabase link --project-ref <ref>` then `supabase db push`
+
+### 3. First admin
+
+```bash
+npm run admin:create -- you@example.com   # prompts for a password (min 10 chars)
+```
+
+This creates the Supabase Auth user (pre-confirmed) and adds it to `public.admins`. Running it again for an existing email resets that user's password.
+
+### 4. Run
+
+```bash
 npm run dev
 ```
 
-- Public registration form: http://localhost:3000/register
+- Registration form: http://localhost:3000/register
 - Admin panel: http://localhost:3000/admin
-
-Running `npm run admin:create -- <username>` for an existing username resets that admin's password and signs out all of their sessions. For non-interactive use, set `ADMIN_PASSWORD=...` in the environment.
 
 ## How it fits together
 
 ```
-Browser ──> Next.js :3000
-              ├─ /register, /admin/*                 pages
-              ├─ /api/register, /api/groups          route handlers → Express
-              └─ /api/admin/*                        rewrite → Express
-Express :5000 ──> server/data/wellness.db (SQLite)
+Browser ──> Next.js
+             ├─ /register ──> POST /api/register ──(service role)──> register_participant()
+             ├─ GET /api/groups ──────────────────(service role)──> group_registration_counts()
+             └─ /admin/* ──(admin's session, RLS)──> admin_list_registrations(), admin_registration_stats()
 ```
+
+### Security model
+
+- **Public visitors** have no direct database access. Registrations go through the Next.js route handler, which validates input and calls `register_participant()` with the service-role key.
+- **Admins** sign in with Supabase Auth. Row-level security allows reading `registrations` only when the user has a row in `public.admins`. Nobody gets insert, update or delete through the API.
+- `register_participant()` takes an advisory lock per group and time slot, so concurrent sign-ups never get the same seat (rooms of 6).
+- `src/proxy.js` refreshes the auth session and redirects signed-out visitors away from `/admin/*`. Access is actually enforced by the database.
+
+### Key files
 
 | Path | Purpose |
 |---|---|
-| `server/index.js` | App bootstrap, middleware, error handling |
-| `server/db.js` | SQLite connection and schema migrations |
-| `server/lib/registrations.js` | Registration create/list/search, seat allocation |
-| `server/lib/auth.js` | Admin users (scrypt password hashes) and sessions |
-| `server/routes/public.js` | `GET /api/health`, `GET /api/groups`, `POST /api/register` |
-| `server/routes/admin.js` | `POST /api/admin/login`, `POST /api/admin/logout`, `GET /api/admin/me`, `GET /api/admin/registrations` (+ `/stats`, `/export`, `/:id`) |
-| `server/scripts/create-admin.js` | Create an admin or reset their password |
+| `supabase/migrations/` | Tables, RLS policies, database functions |
+| `src/lib/supabase/client.js` | Browser Supabase client (admin panel) |
+| `src/lib/supabase/service.js` | Server-only service-role client (route handlers) |
+| `src/lib/programs.js` | Program groups, time slots, participation styles |
+| `src/lib/registrationValidation.js` | Registration input validation |
+| `src/app/api/register`, `src/app/api/groups` | Public API route handlers |
 | `src/app/admin/` | Admin panel UI |
-| `src/proxy.js` | Redirects `/admin/*` to the login page when there is no session cookie |
+| `scripts/create-admin.mjs` | Create an admin or reset their password |
 
-### Admin authentication
+### Managing admins
 
-- Passwords are hashed with scrypt. Sessions are random tokens in an `HttpOnly`, `SameSite=Strict` cookie, and only a SHA-256 hash of each token is stored in the database.
-- Sessions expire after 12 hours by default (`ADMIN_SESSION_TTL_HOURS`).
-- After 5 failed logins from one IP, that IP must wait 15 minutes before trying again.
-- Every `/api/admin/*` endpoint except login and logout needs a valid session. The Next.js proxy check is only a UX redirect; access is actually enforced in Express.
-
-### Data
-
-- The database lives at `server/data/wellness.db`, which is git-ignored. **Back this file up**, since it holds all registrations.
-- If an old `server/data/registrations.json` exists, it is imported automatically on first start and renamed to `registrations.json.imported-<timestamp>`.
-
-## Configuration
-
-Copy `server/.env.example` to `server/.env` to override defaults (port, host, session length, login throttling). For production, set `NODE_ENV=production` so the session cookie is only sent over HTTPS.
-
-On the Next.js side, `EXPRESS_ORIGIN` (used by rewrites at build time) and `EXPRESS_API_URL` (used by the route handlers) point to the API when it isn't at `http://127.0.0.1:5000`.
+- **Add**: `npm run admin:create -- email@example.com`
+- **Remove access**: delete their row from `public.admins`, or delete the user under Authentication → Users.
+- **Disable public sign-ups**: turn off "Allow new users to sign up" under Authentication → Sign In / Providers. Admin accounts are created with the script, and a signed-up non-admin can't see any data anyway.

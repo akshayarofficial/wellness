@@ -1,8 +1,10 @@
-// Program groups, time slots and participation styles offered at registration
+// Time slots and participation styles offered at registration, shared by the API route
+// handlers and the admin panel. Groups themselves are managed in the admin panel (see
+// ./groups.js); PROGRAM_GROUPS is only the fallback shown when the database is unreachable.
 
-const ROOM_CAPACITY = 6;
+export const ROOM_CAPACITY = 6;
 
-const PROGRAM_GROUPS = [
+export const PROGRAM_GROUPS = [
   {
     id: 'group1',
     number: 1,
@@ -57,38 +59,22 @@ const PROGRAM_GROUPS = [
   }
 ];
 
-const TIME_SLOTS = {
+export const TIME_SLOTS = {
   sat_morning: 'Saturday Morning (10:00 AM - 10:10 AM)',
   sat_afternoon: 'Saturday Afternoon (3:00 PM - 3:10 PM)',
   sun_morning: 'Sunday Morning (10:00 AM - 10:10 AM)',
   sun_evening: 'Sunday Evening (6:00 PM - 6:10 PM)'
 };
 
-const PARTICIPATION_STYLES = {
+export const PARTICIPATION_STYLES = {
   active_voice: 'Active Voice (Interactive 6-person peer discussion)',
   listener_first: 'Listener First (Observe & reflect, speak when ready)'
 };
 
-const DEFAULT_TIME_SLOT = 'sat_morning';
-const DEFAULT_PARTICIPATION_STYLE = 'active_voice';
-const DEFAULT_PRIMARY_GOAL = 'Personal Mental Wellness & Habit Building';
+export const DEFAULT_TIME_SLOT = 'sat_morning';
+export const DEFAULT_PARTICIPATION_STYLE = 'active_voice';
+export const DEFAULT_PRIMARY_GOAL = 'Personal Mental Wellness & Habit Building';
 
-function findGroup(groupId) {
+export function findGroup(groupId) {
   return PROGRAM_GROUPS.find((g) => g.id === groupId) || null;
 }
-
-function cohortCode(groupId, cohortNumber) {
-  return `${groupId.toUpperCase()}-ROOM-${String(cohortNumber).padStart(2, '0')}`;
-}
-
-module.exports = {
-  ROOM_CAPACITY,
-  PROGRAM_GROUPS,
-  TIME_SLOTS,
-  PARTICIPATION_STYLES,
-  DEFAULT_TIME_SLOT,
-  DEFAULT_PARTICIPATION_STYLE,
-  DEFAULT_PRIMARY_GOAL,
-  findGroup,
-  cohortCode,
-};
