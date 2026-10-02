@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 
-// Refreshes the Supabase session for admin pages and redirects signed-out visitors
-// to the login page. Admin status itself is enforced by RLS in the database.
+// Each signed-in area and the page signed-out visitors are sent to.
+const AREAS = [
+  { prefix: '/admin', login: '/admin/login' },
+  { prefix: '/student', login: '/student/login' },
+];
+
+// Refreshes the Supabase session for the admin panel and student portal and redirects
+// signed-out visitors to the right login page. What a signed-in user may see is
+// enforced in the database (RLS and the admin_*/student_* functions).
 export async function proxy(request) {
   let response = NextResponse.next({ request });
 
@@ -28,9 +35,10 @@ export async function proxy(request) {
   const { data } = await supabase.auth.getClaims();
   const isSignedIn = Boolean(data?.claims?.sub);
   const { pathname, search } = request.nextUrl;
+  const area = AREAS.find((a) => pathname === a.prefix || pathname.startsWith(`${a.prefix}/`));
 
-  if (!isSignedIn && pathname !== '/admin/login') {
-    const loginUrl = new URL('/admin/login', request.url);
+  if (!isSignedIn && area && pathname !== area.login) {
+    const loginUrl = new URL(area.login, request.url);
     loginUrl.searchParams.set('next', pathname + search);
     const redirect = NextResponse.redirect(loginUrl);
     response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
@@ -41,5 +49,5 @@ export async function proxy(request) {
 }
 
 export const config = {
-  matcher: ['/admin', '/admin/:path*'],
+  matcher: ['/admin', '/admin/:path*', '/student', '/student/:path*', '/api/student/:path*'],
 };

@@ -15,6 +15,7 @@ export default function EverydayLanding() {
       <a className="skip" href="#main">Skip to content</a>
 
       <header className="landing-header">
+        <Link href="/student" className="landing-login">Student login</Link>
         <Link href="/register" className="register-button">Register</Link>
       </header>
 

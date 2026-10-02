@@ -14,6 +14,7 @@ export default function EverydayHeader({ registerHref }) {
       </Link>
       <nav className="header-actions" aria-label="Main Navigation">
         <Link className="nav-link" href="/#programs">Our programs</Link>
+        <Link className="nav-link" href="/student">Student login</Link>
         {registerHref && <Link className="register-button" href={registerHref}>Register</Link>}
       </nav>
     </header>

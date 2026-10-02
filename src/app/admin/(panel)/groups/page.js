@@ -3,10 +3,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ArrowDown, ArrowUp, BookOpen, Inbox, LoaderCircle, Pencil, Plus, Trash2 } from 'lucide-react';
+import ConfirmDialog from '../../../../components/admin/ConfirmDialog';
 import FormDrawer from '../../../../components/admin/FormDrawer';
 import { AdminAuthError, loginRedirectUrl } from '../../../../lib/adminApi';
 import { createGroup, deleteGroup, listGroups, swapGroups, updateGroup } from '../../../../lib/adminContent';
 import { GROUP_STATUSES } from '../../../../lib/groups';
+import { plural } from '../../../../lib/plural';
 
 const NEW_GROUP = {
   name: '', title: '', audience: '', focus: '', eligibilityNotice: '',
@@ -99,6 +101,7 @@ export default function GroupsPage() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
   const [busyId, setBusyId] = useState(null);
+  const [deleting, setDeleting] = useState(null);
 
   const handleError = useCallback((err) => {
     if (err instanceof AdminAuthError) router.replace(loginRedirectUrl());
@@ -124,9 +127,9 @@ export default function GroupsPage() {
     setBusyId(null);
   };
 
-  const handleDelete = (group) => {
-    const detail = group.classCount > 0 ? ` Its ${group.weekCount} week(s) and ${group.classCount} class(es), with their videos, will be removed too.` : '';
-    if (!window.confirm(`Delete "${group.name}"?${detail} This cannot be undone.`)) return;
+  const confirmDelete = () => {
+    const group = deleting;
+    setDeleting(null);
     run(group.id, () => deleteGroup(group.id));
   };
 
@@ -156,7 +159,7 @@ export default function GroupsPage() {
                 <th>Group</th>
                 <th>Status</th>
                 <th>Duration</th>
-                <th>Registrations</th>
+                <th>Students</th>
                 <th>Content</th>
                 <th aria-label="Actions" />
               </tr>
@@ -183,7 +186,7 @@ export default function GroupsPage() {
                       <ArrowDown size={15} />
                     </button>
                   </td>
-                  <td>
+                  <td className="adm-col-main">
                     <Link href={`/admin/groups/${g.id}`} className="adm-strong adm-link">{g.name}</Link>
                     {g.title && <div className="adm-muted adm-small">{g.title}</div>}
                   </td>
@@ -194,12 +197,12 @@ export default function GroupsPage() {
                   </td>
                   <td>
                     {g.registrationCount > 0
-                      ? <Link href={`/admin/registrations?group=${g.id}`} className="adm-link">{g.registrationCount}</Link>
+                      ? <Link href={`/admin/groups/${g.id}?tab=students`} className="adm-link">{g.registrationCount}</Link>
                       : <span className="adm-muted">0</span>}
                   </td>
                   <td className="adm-nowrap">
                     {g.weekCount} of {g.durationWeeks} weeks
-                    <div className="adm-muted adm-small">{g.classCount} classes</div>
+                    <div className="adm-muted adm-small">{plural(g.classCount, 'class', 'classes')}</div>
                   </td>
                   <td className="adm-nowrap adm-row-actions">
                     <Link href={`/admin/groups/${g.id}`} className="adm-btn adm-btn-ghost adm-btn-sm">
@@ -210,7 +213,7 @@ export default function GroupsPage() {
                     </button>
                     <button
                       className="adm-icon-btn adm-icon-btn-danger"
-                      onClick={() => handleDelete(g)}
+                      onClick={() => setDeleting(g)}
                       disabled={g.registrationCount > 0 || busyId}
                       title={g.registrationCount > 0 ? 'A group with registrations cannot be deleted. Close or archive it instead.' : 'Delete group'}
                       aria-label={`Delete ${g.name}`}
@@ -224,6 +227,16 @@ export default function GroupsPage() {
           </table>
         </div>
       </div>
+
+      {deleting && (
+        <ConfirmDialog
+          title={`Delete "${deleting.name}"?`}
+          message={`${deleting.weekCount > 0 ? `Its ${plural(deleting.weekCount, 'week')} and ${plural(deleting.classCount, 'class', 'classes')}, with their videos, will be removed too. ` : ''}This cannot be undone.`}
+          confirmLabel="Delete group"
+          onConfirm={confirmDelete}
+          onCancel={() => setDeleting(null)}
+        />
+      )}
 
       {editing && (
         <GroupDrawer

@@ -3,16 +3,19 @@ import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  ArrowDown, ArrowLeft, ArrowUp, CalendarDays, Eye, EyeOff, Film, Link2, LoaderCircle,
-  Pencil, Play, Plus, Trash2, Upload, X,
+  ArrowDown, ArrowLeft, ArrowUp, BookOpen, CalendarDays, Eye, EyeOff, Film, Link2, LoaderCircle,
+  Pencil, Play, Plus, Trash2, Upload, Users, X,
 } from 'lucide-react';
+import ConfirmDialog from '../../../../../components/admin/ConfirmDialog';
 import FormDrawer from '../../../../../components/admin/FormDrawer';
+import GroupStudents from '../../../../../components/admin/GroupStudents';
 import { AdminAuthError, loginRedirectUrl } from '../../../../../lib/adminApi';
 import {
   addWeeks, createClass, createVideo, deleteClass, deleteVideo, deleteWeek, loadCurriculum, renameVideo,
   setClassStatus, swapClasses, swapVideos, updateClass, updateWeek, videoPlaybackUrl,
 } from '../../../../../lib/adminContent';
 import { GROUP_STATUSES } from '../../../../../lib/groups';
+import { plural } from '../../../../../lib/plural';
 
 const MAX_WEEKS = 104;
 const dateFormat = new Intl.DateTimeFormat(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
@@ -157,14 +160,15 @@ function VideoDrawer({ groupId, cls, video, onClose, onSaved }) {
               </button>
             </div>
           </div>
+          {/* Distinct keys: a file input cannot turn into a controlled text input */}
           {sourceType === 'upload' ? (
-            <label className="adm-field">
+            <label key="upload" className="adm-field">
               <span>Video file</span>
               <input className="adm-input adm-input-file" type="file" accept="video/*" onChange={handleFile} />
               {file && <small className="adm-muted">{(file.size / 1024 / 1024).toFixed(1)} MB</small>}
             </label>
           ) : (
-            <label className="adm-field">
+            <label key="link" className="adm-field">
               <span>Video link</span>
               <input className="adm-input" type="url" value={url} onChange={(e) => setUrl(e.target.value)} required pattern="https://.*" maxLength={2000} placeholder="https://" />
             </label>
@@ -173,7 +177,7 @@ function VideoDrawer({ groupId, cls, video, onClose, onSaved }) {
       )}
       <label className="adm-field">
         <span>Title</span>
-        <input className="adm-input" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} />
+        <input className="adm-input" value={title} onChange={(e) => setTitle(e.target.value)} required maxLength={160} autoFocus={Boolean(video)} />
       </label>
       {!video && sourceType === 'upload' && (
         <p className="adm-muted adm-small adm-field-hint">Keep this window open until the upload finishes. Uploaded videos are private and only playable through the site.</p>
@@ -226,6 +230,10 @@ export default function GroupCurriculumPage() {
   const [error, setError] = useState('');
   const [working, setWorking] = useState(false);
   const [dialog, setDialog] = useState(null);
+  // The Groups list links here with ?tab=students
+  const [view, setView] = useState(() => (
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('tab') === 'students' ? 'students' : 'classes'
+  ));
 
   const handleError = useCallback((err) => {
     if (err instanceof AdminAuthError) router.replace(loginRedirectUrl());
@@ -249,6 +257,11 @@ export default function GroupCurriculumPage() {
     }
     await reload();
     setWorking(false);
+  };
+
+  const switchView = (next) => {
+    setView(next);
+    setError('');
   };
 
   const closeAndReload = () => {
@@ -282,9 +295,7 @@ export default function GroupCurriculumPage() {
   const classCount = weeks.reduce((sum, w) => sum + w.classes.length, 0);
   const publishedCount = weeks.reduce((sum, w) => sum + w.classes.filter((c) => c.status === 'published').length, 0);
 
-  const confirmDelete = (message, action) => {
-    if (window.confirm(`${message} This cannot be undone.`)) run(action);
-  };
+  const confirmDelete = (title, message, action) => setDialog({ type: 'confirm', title, message, action });
 
   return (
     <div className="adm-page">
@@ -295,13 +306,13 @@ export default function GroupCurriculumPage() {
           <h1>{group.name}</h1>
           <p className="adm-muted">
             <span className={`adm-badge adm-badge-${group.status}`}>{GROUP_STATUSES[group.status]}</span>
-            {' '}{group.durationWeeks} weeks · {classCount} classes, {publishedCount} published
+            {' '}{plural(group.durationWeeks, 'week')} · {plural(classCount, 'class', 'classes')}, {publishedCount} published
           </p>
         </div>
-        <div className="adm-page-actions">
+        <div className="adm-page-actions" hidden={view !== 'classes'}>
           {missingWeeks.length > 0 && (
             <button className="adm-btn adm-btn-ghost" disabled={working} onClick={() => run(() => addWeeks(group.id, missingWeeks))}>
-              <CalendarDays size={15} /> {weeks.length === 0 ? `Create all ${group.durationWeeks} weeks` : `Add ${missingWeeks.length} missing week(s)`}
+              <CalendarDays size={15} /> {weeks.length === 0 ? `Create all ${group.durationWeeks} weeks` : `Add ${plural(missingWeeks.length, 'missing week')}`}
             </button>
           )}
           <button className="adm-btn adm-btn-primary" disabled={working || nextWeekNumber > MAX_WEEKS} onClick={() => run(() => addWeeks(group.id, [nextWeekNumber]))}>
@@ -310,16 +321,27 @@ export default function GroupCurriculumPage() {
         </div>
       </div>
 
+      <div className="adm-tabs" role="tablist" aria-label="Group sections">
+        <button role="tab" aria-selected={view === 'classes'} className={view === 'classes' ? 'is-active' : ''} onClick={() => switchView('classes')}>
+          <BookOpen size={15} /> Classes
+        </button>
+        <button role="tab" aria-selected={view === 'students'} className={view === 'students' ? 'is-active' : ''} onClick={() => switchView('students')}>
+          <Users size={15} /> Students
+        </button>
+      </div>
+
       {error && <div className="adm-alert adm-alert-error adm-page-alert" role="alert">{error}</div>}
 
-      {weeks.length === 0 && (
+      {view === 'students' && <GroupStudents group={group} onError={handleError} />}
+
+      {view === 'classes' && weeks.length === 0 && (
         <div className="adm-card adm-empty-card">
           <CalendarDays size={28} className="adm-muted" />
           <p>No weeks yet. Create the weeks, then add classes and videos to each one.</p>
         </div>
       )}
 
-      <div className={`adm-weeks ${working ? 'is-loading' : ''}`}>
+      <div className={`adm-weeks ${working ? 'is-loading' : ''}`} hidden={view !== 'classes'}>
         {weeks.map((week) => (
           <section key={week.id} className="adm-card adm-week">
             <header className="adm-week-header">
@@ -327,7 +349,7 @@ export default function GroupCurriculumPage() {
                 <h2>Week {week.week_number}{week.title && <span> · {week.title}</span>}</h2>
                 <span className="adm-muted adm-small">
                   {week.release_date ? `Releases ${dateFormat.format(new Date(`${week.release_date}T00:00:00`))}` : 'No release date'}
-                  {' · '}{week.classes.length} class(es)
+                  {' · '}{plural(week.classes.length, 'class', 'classes')}
                 </span>
               </div>
               <div className="adm-row-actions">
@@ -339,7 +361,7 @@ export default function GroupCurriculumPage() {
                 </button>
                 <button
                   className="adm-icon-btn adm-icon-btn-danger"
-                  onClick={() => confirmDelete(`Delete week ${week.week_number} and its ${week.classes.length} class(es)?`, () => deleteWeek(week))}
+                  onClick={() => confirmDelete(`Delete week ${week.week_number}?`, `${week.classes.length > 0 ? `Its ${plural(week.classes.length, 'class', 'classes')} and their videos will be removed too. ` : ''}This cannot be undone.`, () => deleteWeek(week))}
                   aria-label={`Delete week ${week.week_number}`}
                 >
                   <Trash2 size={15} />
@@ -381,7 +403,7 @@ export default function GroupCurriculumPage() {
                       </button>
                       <button
                         className="adm-icon-btn adm-icon-btn-danger"
-                        onClick={() => confirmDelete(`Delete "${cls.title}" and its ${cls.videos.length} video(s)?`, () => deleteClass(cls))}
+                        onClick={() => confirmDelete(`Delete "${cls.title}"?`, `${cls.videos.length > 0 ? `Its ${plural(cls.videos.length, 'video')} will be removed too. ` : ''}This cannot be undone.`, () => deleteClass(cls))}
                         aria-label={`Delete ${cls.title}`}
                       >
                         <Trash2 size={15} />
@@ -413,7 +435,7 @@ export default function GroupCurriculumPage() {
                           </button>
                           <button
                             className="adm-icon-btn adm-icon-btn-danger"
-                            onClick={() => confirmDelete(`Delete the video "${video.title}"?`, () => deleteVideo(video))}
+                            onClick={() => confirmDelete(`Delete "${video.title}"?`, 'The video will be removed from this class. This cannot be undone.', () => deleteVideo(video))}
                             aria-label={`Delete ${video.title}`}
                           >
                             <Trash2 size={14} />
@@ -437,6 +459,14 @@ export default function GroupCurriculumPage() {
       {dialog?.type === 'week' && <WeekDrawer week={dialog.week} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
       {dialog?.type === 'class' && <ClassDrawer week={dialog.week} cls={dialog.cls} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
       {dialog?.type === 'video' && <VideoDrawer groupId={group.id} cls={dialog.cls} video={dialog.video} onClose={() => setDialog(null)} onSaved={closeAndReload} />}
+      {dialog?.type === 'confirm' && (
+        <ConfirmDialog
+          title={dialog.title}
+          message={dialog.message}
+          onConfirm={() => { setDialog(null); run(dialog.action); }}
+          onCancel={() => setDialog(null)}
+        />
+      )}
       {dialog?.type === 'preview' && <VideoPreview video={dialog.video} onClose={() => setDialog(null)} />}
     </div>
   );

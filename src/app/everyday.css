@@ -96,7 +96,9 @@ body:has(.everyday) { background: #071426; }
   background: transparent;
   pointer-events: none;
 }
-.everyday .landing-header .register-button { pointer-events: auto; }
+.everyday .landing-header .register-button, .everyday .landing-login { pointer-events: auto; }
+.everyday .landing-login { margin-right: 14px; padding: 6px 12px; border-radius: 30px; background: #07142680; color: var(--ink); font-size: 13px; font-weight: 600; backdrop-filter: blur(6px); }
+.everyday .landing-login:hover { background: #071426bb; }
 
 .everyday.landing main { width: min(1180px, calc(100% - 48px)); padding-bottom: 16px; }
 .everyday .media-stage {
@@ -424,7 +426,7 @@ body:has(.everyday) { background: #071426; }
 .everyday.register .reg-solid-violet { background: var(--violet); color: var(--bg); }
 .everyday.register .reg-dot { background: #34d399; }
 
-.everyday.register :is(input[type=text], input[type=email], select, textarea) {
+.everyday.register :is(input[type=text], input[type=email], input[type=password], select, textarea) {
   border: 1px solid #ffffff30;
   background: var(--bg);
   color: var(--ink);
@@ -432,7 +434,7 @@ body:has(.everyday) { background: #071426; }
   outline: none;
   transition: border-color .2s, box-shadow .2s;
 }
-.everyday.register :is(input[type=text], input[type=email], select, textarea):focus {
+.everyday.register :is(input[type=text], input[type=email], input[type=password], select, textarea):focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px #54dfd726;
 }

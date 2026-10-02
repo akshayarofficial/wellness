@@ -26,6 +26,7 @@ export function toRegistrationDto(row, group) {
     notes: row.notes,
     is18OrOver: true,
     status: row.status,
+    completedAt: row.completed_at || null,
     registeredAt: row.registered_at,
     orientationLink: '/classroom',
     nextSessionDate: row.time_slot.startsWith('sat') ? 'Upcoming Saturday' : 'Upcoming Sunday',

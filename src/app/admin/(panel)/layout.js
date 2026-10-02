@@ -2,12 +2,13 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ClipboardList, Layers, Leaf, LoaderCircle, LogOut, Menu, X } from 'lucide-react';
+import { ClipboardList, Layers, Leaf, LoaderCircle, LogOut, Menu, Settings, X } from 'lucide-react';
 import { AdminAuthError, getCurrentAdmin, loginRedirectUrl, signOut } from '../../../lib/adminApi';
 
 const NAV_ITEMS = [
   { href: '/admin/registrations', label: 'Registrations', icon: ClipboardList },
   { href: '/admin/groups', label: 'Groups', icon: Layers },
+  { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminPanelLayout({ children }) {

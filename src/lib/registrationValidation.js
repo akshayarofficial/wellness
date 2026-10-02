@@ -5,6 +5,8 @@ import {
 import { GROUP_ID_RE } from './groups';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+export const MIN_PASSWORD_LENGTH = 8;
+const MAX_PASSWORD_LENGTH = 72;
 
 function str(value, maxLength) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
@@ -23,6 +25,12 @@ export function parseRegistration(body = {}) {
 
   const email = str(body.email, 254).toLowerCase();
   if (!EMAIL_RE.test(email)) errors.push('A valid email address is required.');
+
+  // Becomes the student's portal login. Never trimmed, echoed back or logged.
+  const password = typeof body.password === 'string' ? body.password : '';
+  if (password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) {
+    errors.push(`Choose a password of at least ${MIN_PASSWORD_LENGTH} characters for your student login.`);
+  }
 
   const phone = str(body.phone, 32);
   if (phone && !/^\+?[0-9\s()-]{6,32}$/.test(phone)) errors.push('Phone number contains invalid characters.');
@@ -43,6 +51,7 @@ export function parseRegistration(body = {}) {
     value: {
       fullName,
       email,
+      password,
       phone,
       whatsAppOptIn: Boolean(phone) && isTrue(body.whatsAppOptIn),
       groupId,

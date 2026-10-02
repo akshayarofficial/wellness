@@ -1,15 +1,47 @@
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { createServiceClient } from '../../../lib/supabase/service';
 import { parseRegistration } from '../../../lib/registrationValidation';
 import { toRegistrationDto } from '../../../lib/registrationDto';
 import { toGroupDto } from '../../../lib/groups';
+
+function fail(status, error) {
+  return NextResponse.json({ success: false, error }, { status });
+}
+
+// Finds or creates the student's login. Returns { userId, created } or { error } for the client.
+async function resolveAccount(supabase, { email, password, fullName }) {
+  const created = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { full_name: fullName },
+  });
+  if (!created.error) return { userId: created.data.user.id, created: true };
+
+  if (created.error.code !== 'email_exists' && created.error.status !== 422) throw created.error;
+
+  // The email already has a login. Only link this registration to it if the person
+  // registering knows that account's password; otherwise their details would land in
+  // an account someone else controls.
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const signIn = await anon.auth.signInWithPassword({ email, password });
+  if (signIn.error) {
+    return {
+      error: 'A student account already exists for this email. Enter that account\'s password to add this group to it, or sign in to the student portal.',
+    };
+  }
+  return { userId: signIn.data.user.id, created: false };
+}
 
 export async function POST(request) {
   let body;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ success: false, error: 'Malformed JSON body.' }, { status: 400 });
+    return fail(400, 'Malformed JSON body.');
   }
 
   const { errors, value } = parseRegistration(body);
@@ -19,6 +51,10 @@ export async function POST(request) {
 
   try {
     const supabase = createServiceClient();
+
+    const account = await resolveAccount(supabase, value);
+    if (account.error) return fail(409, account.error);
+
     const { data, error } = await supabase.rpc('register_participant', {
       p_full_name: value.fullName,
       p_email: value.email,
@@ -29,21 +65,18 @@ export async function POST(request) {
       p_participation_style: value.participationStyle,
       p_primary_goal: value.primaryGoal,
       p_notes: value.notes,
+      p_user_id: account.userId,
     });
 
     if (error) {
+      // Don't leave behind a login that has no registration
+      if (account.created) await supabase.auth.admin.deleteUser(account.userId).catch(() => {});
+
       if (error.code === 'EG001') {
-        return NextResponse.json(
-          { success: false, error: 'This group is not open for registration. Please choose another group.' },
-          { status: 400 }
-        );
+        return fail(400, 'This group is not open for registration. Please choose another group.');
       }
       if (error.code === '23505') {
-        // Don't echo the stored record back: anyone could look up a person's details by email.
-        return NextResponse.json({
-          success: false,
-          error: 'This email is already registered for this group. Check your inbox for your confirmation details.',
-        }, { status: 409 });
+        return fail(409, 'You are already registered for this group. Sign in to the student portal to see your classes.');
       }
       throw error;
     }
@@ -57,9 +90,6 @@ export async function POST(request) {
     }, { status: 201 });
   } catch (error) {
     console.error('[api/register] Registration failed:', error.message || error);
-    return NextResponse.json(
-      { success: false, error: 'Unable to complete your registration right now. Please try again in a moment.' },
-      { status: 503 }
-    );
+    return fail(503, 'Unable to complete your registration right now. Please try again in a moment.');
   }
 }

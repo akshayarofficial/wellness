@@ -10,6 +10,8 @@ import { listGroups } from '../../../../lib/adminContent';
 import { TIME_SLOTS } from '../../../../lib/programs';
 import { toRegistrationDto } from '../../../../lib/registrationDto';
 import { downloadCsv, registrationsToCsv } from '../../../../lib/registrationsCsv';
+import { useDebounced } from '../../../../lib/useDebounced';
+import RegistrationDrawer from '../../../../components/admin/RegistrationDrawer';
 
 const PAGE_SIZES = [10, 25, 50, 100];
 const EXPORT_BATCH = 1000;
@@ -23,15 +25,6 @@ const dateTimeFormat = new Intl.DateTimeFormat(undefined, {
 
 function formatDate(iso) {
   return iso ? dateTimeFormat.format(new Date(iso)) : '—';
-}
-
-function useDebounced(value, delay) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(value), delay);
-    return () => clearTimeout(t);
-  }, [value, delay]);
-  return debounced;
 }
 
 // Maps UI filters to admin_list_registrations() arguments
@@ -62,74 +55,6 @@ function SortHeader({ label, field, sort, onSort }) {
         {label} <Icon size={13} />
       </button>
     </th>
-  );
-}
-
-function DetailRow({ label, children }) {
-  return (
-    <div className="adm-detail-row">
-      <dt>{label}</dt>
-      <dd>{children || <span className="adm-muted">—</span>}</dd>
-    </div>
-  );
-}
-
-function RegistrationDrawer({ registration, onClose }) {
-  useEffect(() => {
-    const onKey = (e) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
-  const r = registration;
-  return (
-    <>
-      <div className="adm-backdrop adm-backdrop-drawer" onClick={onClose} />
-      <aside className="adm-drawer" role="dialog" aria-modal="true" aria-labelledby="adm-drawer-title">
-        <header className="adm-drawer-header">
-          <div>
-            <span className="adm-mono adm-muted">{r.registrationNumber}</span>
-            <h2 id="adm-drawer-title">{r.fullName}</h2>
-          </div>
-          <button className="adm-icon-btn" onClick={onClose} aria-label="Close details"><X size={18} /></button>
-        </header>
-        <div className="adm-drawer-body">
-          <section>
-            <h3>Contact</h3>
-            <dl>
-              <DetailRow label="Email"><a href={`mailto:${r.email}`}>{r.email}</a></DetailRow>
-              <DetailRow label="Phone">{r.phone}</DetailRow>
-              <DetailRow label="WhatsApp reminders">{r.whatsAppOptIn ? 'Opted in' : 'Not opted in'}</DetailRow>
-            </dl>
-          </section>
-          <section>
-            <h3>Program</h3>
-            <dl>
-              <DetailRow label="Group">Group {r.groupNumber} · {r.groupName}</DetailRow>
-              <DetailRow label="Track">{r.groupTitle}</DetailRow>
-              <DetailRow label="Time slot">{r.timeSlotLabel}</DetailRow>
-              <DetailRow label="Cohort">{r.cohortCode} · Seat {r.seatNumber} of {r.maxRoomCapacity}</DetailRow>
-              <DetailRow label="Participation">{r.participationStyleLabel}</DetailRow>
-            </dl>
-          </section>
-          <section>
-            <h3>About them</h3>
-            <dl>
-              <DetailRow label="Primary goal">{r.primaryGoal}</DetailRow>
-              <DetailRow label="Notes">{r.notes && <span className="adm-prewrap">{r.notes}</span>}</DetailRow>
-            </dl>
-          </section>
-          <section>
-            <h3>Record</h3>
-            <dl>
-              <DetailRow label="Status"><span className="adm-badge adm-badge-success">{r.status}</span></DetailRow>
-              <DetailRow label="Registered">{formatDate(r.registeredAt)}</DetailRow>
-              <DetailRow label="Age confirmed">18+ confirmed</DetailRow>
-            </dl>
-          </section>
-        </div>
-      </aside>
-    </>
   );
 }
 

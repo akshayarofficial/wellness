@@ -6,6 +6,8 @@ import '../everyday.css';
 import EverydayHeader from '../../components/everyday/EverydayHeader';
 import EverydayFooter from '../../components/everyday/EverydayFooter';
 import CountryPhoneInput from '../../components/CountryPhoneInput';
+import { MIN_PASSWORD_LENGTH } from '../../lib/registrationValidation';
+import { signIn } from '../../lib/studentApi';
 import { 
   Users, CheckCircle2, ShieldCheck, Sparkles, AlertCircle, 
   Clock, Calendar, MessageSquare, Mail, Phone, User, 
@@ -112,6 +114,9 @@ function RegistrationFormInner() {
   // Form Fields (Sequential line-by-line)
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [signedIn, setSignedIn] = useState(false);
   const [is18OrOver, setIs18OrOver] = useState(true);
   const [phone, setPhone] = useState('');
   const [whatsAppOptIn, setWhatsAppOptIn] = useState(true);
@@ -170,6 +175,16 @@ function RegistrationFormInner() {
       return;
     }
 
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setErrorMessage(`Choose a password of at least ${MIN_PASSWORD_LENGTH} characters for your student login.`);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage('The password and its confirmation do not match.');
+      return;
+    }
+
     if (!is18OrOver) {
       setErrorMessage('Under-18 registration notice: Everyday Mental Wellness is strictly designed for adults aged 18 and older. If you or a minor needs immediate emotional support, please call Tele-MANAS (14416 / 1800-891-4416), Childline (1098), or dial 112 (India). (International: 988).');
       return;
@@ -185,6 +200,7 @@ function RegistrationFormInner() {
     const payload = {
       fullName: fullName.trim(),
       email: email.trim().toLowerCase(),
+      password,
       phone: phone.trim(),
       whatsAppOptIn,
       groupId: selectedGroup,
@@ -209,6 +225,11 @@ function RegistrationFormInner() {
         throw new Error(result.error || 'Failed to submit registration. Please try again.');
       }
 
+      // Sign the new student in so the success screen can lead straight into the portal
+      const didSignIn = await signIn(payload.email, password).then(() => true, () => false);
+      setSignedIn(didSignIn);
+      setPassword('');
+      setConfirmPassword('');
       setRegistrationSuccess(result.registration);
       window.scrollTo({ top: 80, behavior: 'smooth' });
     } catch (err) {
@@ -355,17 +376,11 @@ function RegistrationFormInner() {
 
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
-              href="/classroom"
+              href={signedIn ? '/student' : '/student/login'}
               className="register-button gap-2"
             >
-              <span>Enter Learner Classroom</span>
+              <span>{signedIn ? 'Go to my classes' : 'Sign in to my classes'}</span>
               <ArrowRight className="w-4 h-4" />
-            </Link>
-            <Link
-              href="/tracks"
-              className="px-6 py-3.5 rounded-full reg-surface border reg-line reg-ink text-xs sm:text-sm font-bold transition-colors"
-            >
-              <span>View All 4 Tracks</span>
             </Link>
             <button
               type="button"
@@ -433,9 +448,45 @@ function RegistrationFormInner() {
                   className="w-full h-12 sm:h-[50px] px-4 rounded-xl reg-surface border reg-line reg-ink text-sm sm:text-base transition-all shadow-xs"
                 />
                 <p className="text-[11px] reg-muted mt-1 pl-0.5 leading-normal">
-                  We use this email to send your private cohort calendar invite and weekly comic summary.
+                  This email is also your student portal login.
                 </p>
               </div>
+
+              {/* Student login password */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="reg-password" className="flex items-center gap-2 text-xs sm:text-sm font-bold reg-ink mb-1.5">
+                    <span>Create a Password <span className="reg-danger">*</span></span>
+                  </label>
+                  <input
+                    id="reg-password"
+                    type="password"
+                    required
+                    minLength={MIN_PASSWORD_LENGTH}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    className="w-full h-12 sm:h-[50px] px-4 rounded-xl reg-surface border reg-line reg-ink text-sm sm:text-base transition-all shadow-xs"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-password-confirm" className="flex items-center gap-2 text-xs sm:text-sm font-bold reg-ink mb-1.5">
+                    <span>Confirm Password <span className="reg-danger">*</span></span>
+                  </label>
+                  <input
+                    id="reg-password-confirm"
+                    type="password"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    className="w-full h-12 sm:h-[50px] px-4 rounded-xl reg-surface border reg-line reg-ink text-sm sm:text-base transition-all shadow-xs"
+                  />
+                </div>
+              </div>
+              <p className="text-[11px] reg-muted pl-0.5 leading-normal">
+                At least {MIN_PASSWORD_LENGTH} characters. You will use your email and this password to sign in and watch your classes.
+              </p>
 
               {/* Age 18+ Confirmation Card */}
               <div className="p-4 sm:p-4.5 rounded-xl reg-surface-soft border reg-line flex items-start gap-3">

@@ -1,6 +1,7 @@
 // Admin-panel data access for groups, weeks, classes and videos (RLS enforces admin access).
 import { AdminAuthError, adminRpc, getSupabase } from './adminApi';
 import { toGroupDto } from './groups';
+import { toRegistrationDto } from './registrationDto';
 
 const VIDEO_BUCKET = 'class-videos';
 const SIGNED_URL_SECONDS = 60 * 60;
@@ -76,6 +77,79 @@ export async function deleteGroup(id) {
   const paths = uploadedPaths(weeks.flatMap((w) => w.classes.flatMap((c) => c.videos)));
   unwrap(await getSupabase().from('groups').delete().eq('id', id));
   await removeVideoFiles(paths);
+}
+
+// ---------- Students ----------
+
+// One page of a group's students plus the active/completed totals. `rows` are raw registrations rows.
+export async function listGroupStudents(groupId, { status, q, limit, offset }) {
+  const data = await adminRpc('admin_list_group_students', {
+    p_group_id: groupId, p_status: status || null, p_q: q || null, p_limit: limit, p_offset: offset,
+  }).catch((err) => {
+    // PostgREST's wording when the student_status migration has not been applied yet
+    if (/could not find the function/i.test(err.message)) {
+      throw new Error('The student list is not available yet: apply the latest database migration (student_status) in Supabase.');
+    }
+    throw err;
+  });
+  return {
+    counts: { active: Number(data.counts.active), completed: Number(data.counts.completed) },
+    total: Number(data.total),
+    rows: data.rows,
+  };
+}
+
+// One student's profile: registration (DTO), week-by-week class progress, attendance days,
+// recent activity and a computed summary.
+export async function getStudentProfile(registrationId) {
+  const data = await adminRpc('admin_student_profile', { p_registration_id: registrationId });
+  const group = data.group ? toGroupDto(data.group) : undefined;
+
+  const weeks = data.weeks.map((w) => ({
+    weekNumber: w.week_number,
+    title: w.title,
+    released: w.released,
+    classes: w.classes.map((c) => ({
+      id: c.id,
+      title: c.title,
+      completedAt: c.completed_at,
+      plays: Number(c.plays),
+      firstWatchedAt: c.first_watched_at,
+      lastWatchedAt: c.last_watched_at,
+    })),
+  }));
+  const classes = weeks.flatMap((w) => w.classes);
+  const completedClasses = classes.filter((c) => c.completedAt).length;
+
+  return {
+    registration: toRegistrationDto(data.registration, group),
+    hasAccount: data.has_account,
+    weeks,
+    attendance: data.attendance.map((d) => ({
+      day: d.day,
+      videoPlays: Number(d.video_plays),
+      classesCompleted: Number(d.classes_completed),
+      firstAt: d.first_at,
+      lastAt: d.last_at,
+    })),
+    recentActivity: data.recent_activity.map((a) => ({
+      kind: a.kind, at: a.at, classTitle: a.class_title, videoTitle: a.video_title,
+    })),
+    summary: {
+      totalClasses: classes.length,
+      completedClasses,
+      percent: classes.length ? Math.round((completedClasses / classes.length) * 100) : 0,
+      totalWeeks: weeks.length,
+      weeksCompleted: weeks.filter((w) => w.classes.length > 0 && w.classes.every((c) => c.completedAt)).length,
+      weeksStarted: weeks.filter((w) => w.classes.some((c) => c.completedAt || c.plays > 0)).length,
+      videoPlays: classes.reduce((sum, c) => sum + c.plays, 0),
+      classesWatched: classes.filter((c) => c.plays > 0).length,
+    },
+  };
+}
+
+export async function setStudentStatus(registrationId, status) {
+  await adminRpc('admin_set_student_status', { p_registration_id: registrationId, p_status: status });
 }
 
 // ---------- Curriculum: weeks → classes → videos ----------

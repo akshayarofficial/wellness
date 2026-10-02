@@ -484,3 +484,101 @@ td.adm-row-actions > * { vertical-align: middle; }
   .adm-videos li { flex-wrap: wrap; }
   .adm-video-title { flex-basis: 100%; white-space: normal; }
 }
+
+/* ---------- Confirm dialog ---------- */
+.adm-confirm { width: min(440px, calc(100vw - 32px)); }
+.adm-confirm-body { display: flex; gap: 14px; padding: 22px 20px 18px; }
+.adm-confirm-body h2 { font-size: 17px; margin-bottom: 6px; }
+.adm-confirm-body p { font-size: 13.5px; line-height: 1.5; }
+.adm-confirm-icon { flex-shrink: 0; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 50%; background: var(--adm-danger-bg); color: var(--adm-danger); }
+.adm-btn-danger { background: var(--adm-danger); color: #fff !important; border: 1px solid var(--adm-danger); }
+.adm-btn-danger:hover:not(:disabled) { filter: brightness(0.92); }
+
+/* The site-wide `section` rule adds 72px of vertical padding; week cards are sections. */
+.adm-week { padding: 0; z-index: auto; }
+.adm-col-main { min-width: 220px; }
+/* Keep row actions reachable when the table scrolls sideways */
+td.adm-row-actions { position: sticky; right: 0; background: var(--adm-surface); box-shadow: -8px 0 8px -8px rgba(20, 34, 28, 0.18); }
+
+/* ---------- Tabs, students, settings ---------- */
+.adm-root [hidden] { display: none !important; }
+
+.adm-tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--adm-border-strong); }
+.adm-tabs button { display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; margin-bottom: -1px; border-bottom: 2px solid transparent; font-size: 14px; font-weight: 600; color: var(--adm-muted); }
+.adm-tabs button:hover { color: var(--adm-heading); }
+.adm-tabs button.is-active { color: var(--adm-primary); border-bottom-color: var(--adm-primary); }
+
+.adm-tabs-pill { gap: 4px; margin: 0; padding: 4px; border: 1px solid var(--adm-border-strong); border-radius: 10px; }
+.adm-tabs-pill button { height: 30px; padding: 0 12px; margin: 0; border: 0; border-radius: 7px; font-size: 13px; }
+.adm-tabs-pill button.is-active { background: var(--adm-primary-soft); }
+.adm-tabs-pill b { font-weight: 700; opacity: 0.75; }
+
+.adm-badge-active { background: var(--adm-primary-soft); color: var(--adm-primary); }
+.adm-badge-completed { background: #DCF3E8; color: #1C6B4A; }
+.adm-alert-success { display: flex; align-items: center; gap: 8px; background: #E6F5EC; border: 1px solid #B9DFC8; color: #1C6B4A; }
+
+.adm-settings-card { max-width: 520px; padding: 20px; overflow: visible; }
+.adm-settings-card .adm-alert { margin-bottom: 16px; }
+.adm-settings-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+.adm-settings-header h2 { font-size: 17px; }
+.adm-settings-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 10px; background: var(--adm-primary-soft); color: var(--adm-primary); }
+.adm-settings-actions { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; margin-top: 4px; }
+
+/* ---------- Student profile ---------- */
+.adm-drawer-link { margin-top: 10px; }
+.adm-alert-warning { display: flex; align-items: center; gap: 8px; background: #FDF3E1; border: 1px solid #F1D29B; color: #8A5A0B; }
+.adm-profile-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.adm-stat > small { display: block; margin-top: 2px; font-size: 12px; color: var(--adm-muted); }
+.adm-stat-primary > small { color: #C9D8CF; }
+
+.adm-profile-grid { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; }
+.adm-profile-main { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.adm-profile-details { padding: 4px 20px 12px; overflow: visible; position: sticky; top: 16px; }
+.adm-profile-details section { padding: 14px 0; z-index: auto; }
+.adm-profile-details .adm-detail-row { grid-template-columns: 110px 1fr; }
+
+/* These are <section>s: undo the site-wide 72px section padding */
+.adm-profile-section { overflow: hidden; padding: 0; z-index: auto; }
+.adm-profile-section-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; padding: 14px 16px; border-bottom: 1px solid var(--adm-border); }
+.adm-profile-section-head h2 { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; }
+.adm-profile-empty { padding: 20px 16px; font-size: 13.5px; }
+
+.adm-profile-week { padding: 12px 16px; border-bottom: 1px solid #EEF2EF; }
+.adm-profile-week:last-child { border-bottom: none; }
+.adm-profile-week-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; font-size: 14px; }
+.adm-profile-week-head .adm-muted { font-weight: 500; }
+.adm-profile-classes { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.adm-profile-classes li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  grid-template-areas: "icon title title" "icon state plays";
+  align-items: center;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #F8FAF8;
+  font-size: 13.5px;
+}
+.adm-profile-classes li > svg { grid-area: icon; color: var(--adm-muted); }
+.adm-profile-class-state { grid-area: state; }
+.adm-profile-class-plays { grid-area: plays; }
+.adm-profile-classes li.is-done > svg { color: #1C6B4A; }
+.adm-profile-classes li.is-watched > svg { color: var(--adm-primary); }
+.adm-profile-class-title { grid-area: title; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--adm-heading); font-weight: 600; }
+
+.adm-activity { list-style: none; margin: 0; padding: 4px 0; }
+.adm-activity li { display: grid; grid-template-columns: 96px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 8px 16px; border-bottom: 1px solid #EEF2EF; font-size: 13.5px; }
+.adm-activity li:last-child { border-bottom: none; }
+.adm-activity-kind { justify-self: start; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 700; background: var(--adm-primary-soft); color: var(--adm-primary); }
+.adm-activity-kind.is-class_completed { background: #DCF3E8; color: #1C6B4A; }
+.adm-activity-kind.is-class_uncompleted { background: #EEF1EF; color: #5F746B; }
+
+@media (max-width: 1100px) {
+  .adm-profile-grid { grid-template-columns: 1fr; }
+  .adm-profile-details { position: static; }
+  .adm-profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 640px) {
+  .adm-profile-classes li { grid-template-columns: 18px minmax(0, 1fr); grid-template-areas: "icon title" "icon state" "icon plays"; }
+  .adm-activity li { grid-template-columns: 1fr; gap: 2px; }
+}
